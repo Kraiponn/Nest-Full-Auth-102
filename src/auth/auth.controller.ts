@@ -1,4 +1,14 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { AuthDto } from './dto';
 import { Tokens } from './types';
@@ -10,7 +20,8 @@ export class AuthController {
   /****************************
    * Sign Up
    */
-  @Post('/local/signup')
+  @Post('local/signup')
+  @HttpCode(HttpStatus.CREATED)
   signup(@Body() body: AuthDto): Promise<Tokens> {
     return this.authService.signupLocal(body);
   }
@@ -18,23 +29,29 @@ export class AuthController {
   /****************************
    * sign In
    */
-  @Post('/local/signin')
-  signin() {
-    return this.authService.signinLocal();
+  @Post('local/signin')
+  @HttpCode(HttpStatus.OK)
+  signin(@Body() body: AuthDto): Promise<Tokens> {
+    return this.authService.signinLocal(body);
   }
 
   /****************************
    * Log Out
    */
-  @Post('/logout')
-  logout() {
-    return this.authService.logout();
+  @UseGuards(AuthGuard('jwt'))
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  logout(@Req() req: Request) {
+    const user = req.user;
+    return this.authService.logout(user['id']);
   }
 
   /****************************
-   * Refresh Token
+   * Refresh Token : 1:11
    */
-  @Post('/refresh')
+  @UseGuards(AuthGuard('jwt-refresh'))
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
   refreshToken() {
     return this.authService.refreshToken();
   }
