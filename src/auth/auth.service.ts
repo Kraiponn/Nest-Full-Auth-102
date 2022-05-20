@@ -4,10 +4,14 @@ import { AuthDto } from './dto';
 
 import * as bcrypt from 'bcrypt';
 import { Tokens } from './types';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private jwtService: JwtService,
+  ) {}
 
   /****************************
    * Helper functions
@@ -16,10 +20,51 @@ export class AuthService {
     return bcrypt.hash(data, 10);
   }
 
+  async getTokens(userId: number, email: string) {
+    const [at, rt] = await Promise.all([
+      this.jwtService.signAsync(
+        {
+          sub: userId,
+          email,
+        },
+        {
+          expiresIn: 60 * 15,
+          secret: 'at-secret',
+        },
+      ),
+      this.jwtService.signAsync(
+        {
+          sub: userId,
+          email,
+        },
+        {
+          expiresIn: 60 * 60 * 24 * 7,
+          secret: 'rt-secret',
+        },
+      ),
+    ]);
+
+    return {
+      access_token: at,
+      refresh_token: rt,
+    };
+  }
+
+  async updateRtHash(userId: number, rt: string) {
+    const hash = await this.hashData(rt);
+
+    await this.prismaService.user.update({
+      where: { id: userId },
+      data: {
+        refreshRt: hash,
+      },
+    });
+  }
+
   /****************************
-   * Sign Up
+   * Sign Up :56.25
    */
-  async signup({ email, password }: AuthDto): Promise<Tokens> {
+  async signupLocal({ email, password }: AuthDto): Promise<Tokens> {
     const hash = await this.hashData(password);
 
     const user = await this.prismaService.user.create({
@@ -29,13 +74,16 @@ export class AuthService {
       },
     });
 
-    return { access_token: '', refresh_token: '' };
+    const tokens = await this.getTokens(user.id, user.email);
+    await this.updateRtHash(user.id, tokens.refresh_token);
+
+    return tokens;
   }
 
   /****************************
    * Sign In
    */
-  signin() {
+  signinLocal() {
     return '';
   }
 

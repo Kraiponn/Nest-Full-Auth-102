@@ -12,7 +12,7 @@ export class AuthController {
    */
   @Post('/local/signup')
   signup(@Body() body: AuthDto): Promise<Tokens> {
-    return this.authService.signup(body);
+    return this.authService.signupLocal(body);
   }
 
   /****************************
@@ -20,7 +20,7 @@ export class AuthController {
    */
   @Post('/local/signin')
   signin() {
-    return this.authService.signin();
+    return this.authService.signinLocal();
   }
 
   /****************************
