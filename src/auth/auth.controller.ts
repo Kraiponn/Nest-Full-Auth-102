@@ -4,12 +4,11 @@ import {
   HttpCode,
   HttpStatus,
   Post,
-  Req,
   UseGuards,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
-import { Request } from 'express';
 import { AuthService } from './auth.service';
+import { GetCurrentUser, GetCurrentUserId, Public } from './common/decorators';
+import { RtGuard } from './common/guards';
 import { AuthDto } from './dto';
 import { Tokens } from './types';
 
@@ -18,8 +17,11 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   /****************************
-   * Sign Up
+   * @route   /auth/local/signup
+   * @desc    Sign Up
+   * @access  Public
    */
+  @Public()
   @Post('local/signup')
   @HttpCode(HttpStatus.CREATED)
   signup(@Body() body: AuthDto): Promise<Tokens> {
@@ -27,8 +29,11 @@ export class AuthController {
   }
 
   /****************************
-   * sign In
+   * @route   /auth/local/signin
+   * @desc    Sign In
+   * @access  Public
    */
+  @Public()
   @Post('local/signin')
   @HttpCode(HttpStatus.OK)
   signin(@Body() body: AuthDto): Promise<Tokens> {
@@ -36,23 +41,29 @@ export class AuthController {
   }
 
   /****************************
-   * Log Out
+   * @route   /auth/logout
+   * @desc    Sign out from system
+   * @access  Private
    */
-  @UseGuards(AuthGuard('jwt'))
   @Post('logout')
   @HttpCode(HttpStatus.OK)
-  logout(@Req() req: Request) {
-    const user = req.user;
-    return this.authService.logout(user['id']);
+  logout(@GetCurrentUserId() userId: number) {
+    return this.authService.logout(userId);
   }
 
   /****************************
-   * Refresh Token : 1:11
+   * @route   /auth/refresh
+   * @desc    Request the new tokens by using refresh token key
+   * @access  Private
    */
-  @UseGuards(AuthGuard('jwt-refresh'))
+  @Public()
+  @UseGuards(RtGuard)
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  refreshToken() {
-    return this.authService.refreshToken();
+  refreshTokens(
+    @GetCurrentUserId() userId: number,
+    @GetCurrentUser('refreshToken') refreshToken: string,
+  ) {
+    return this.authService.refreshTokens(userId, refreshToken);
   }
 }
