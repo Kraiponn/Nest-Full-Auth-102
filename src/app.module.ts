@@ -7,7 +7,6 @@ import { PrismaModule } from './prisma/prisma.module';
 @Module({
   imports: [ConfigModule.forRoot({ isGlobal: true }), AuthModule, PrismaModule],
   providers: [
-    // Add global at guard class and auto inject reflector to class
     {
       provide: APP_GUARD,
       useClass: AtGuard,
